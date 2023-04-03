@@ -24,42 +24,21 @@ with open('english/en_fce_train.tsv', 'r', encoding='utf-8') as f:
             words.append(word)
             curr_labels.append(label)
 
-# Print first sentence and its corresponding label sequence
-print(sentences[0])
-print(labels[0])
-
 # Tokenize the sentences
 tokenizer = Tokenizer(oov_token='<OOV>')
 tokenizer.fit_on_texts(sentences)
-
-# Create word-to-index dictionary
 word_index = tokenizer.word_index
 
 # Convert sentences to sequences of indices
 sequences = tokenizer.texts_to_sequences(sentences)
 
-# Print the first sequence
-print(sequences[0])
-
 # Pad sequences to ensure fixed length
-max_length = 100
+max_length = 200
 padded_sequences = pad_sequences(sequences, maxlen=max_length, padding='post', truncating='post')
 
-# Print the first padded sequence
-print(padded_sequences[0])
-
-# Plot the sentence length distribution
-plt.hist([len(s.split()) for s in sentences], bins=50)
-plt.xlabel('Sentence Length')
-plt.ylabel('Frequency')
-plt.title('Sentence Length Distribution')
-plt.show()
-
 # Tokenize the labels
-label_tokenizer = Tokenizer()
+label_tokenizer = Tokenizer(oov_token='<OOV>')
 label_tokenizer.fit_on_texts(labels)
-
-# Create label-to-index dictionary
 label_index = label_tokenizer.word_index
 
 # Convert labels to sequences of indices
@@ -104,19 +83,17 @@ padded_test_sequences = pad_sequences(test_sequences, maxlen=max_length, padding
 # Generate predictions
 predictions = model.predict(padded_test_sequences)
 predicted_labels = np.argmax(predictions, axis=-1)
-predicted_labels_text = label_tokenizer.sequences_to_texts(predicted_labels)
 
-print("Number of test sentences:", len(test_sentences))
-print("Number of predicted labels:", len(predicted_labels_text))
-assert len(test_sentences) == len(predicted_labels_text)
+# Filter out the padding tokens
+predicted_labels_filtered = np.where(predicted_labels == 0, 0, predicted_labels)
+
+# Convert filtered label sequences to text
+predicted_labels_text = label_tokenizer.sequences_to_texts(predicted_labels_filtered)
 
 with open('english/predictions.tsv', 'w', encoding='utf-8') as f:
     for sent, labels in zip(test_sentences, predicted_labels_text):
         words = sent.split()
         pred_labels = labels.split()
         for word, label in zip(words, pred_labels):
-            if label != '0':  # Skip the default padding label
-                f.write(f"{word}\t{label}\n")
-            else:
-                f.write(f"{word}\t{i}\n")  # Write 'i' as the label if there's no corresponding label
+            f.write(f"{word}\t{label}\n")
         f.write("\n")
