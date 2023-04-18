@@ -38,9 +38,11 @@ print(labels[0])
 # In[25]:
 
 
-# Tokenize the sentences
-tokenizer = Tokenizer(oov_token='<OOV>')
+# Initialize the tokenizer without any filters
+tokenizer = Tokenizer(oov_token='<OOV>', filters='')
 tokenizer.fit_on_texts(sentences)
+
+
 
 # Create word-to-index dictionary
 word_index = tokenizer.word_index
@@ -129,71 +131,40 @@ predicted_labels_text = label_tokenizer.sequences_to_texts(predicted_labels)
 print("Number of test sentences:", len(test_sentences))
 print("Number of predicted labels:", len(predicted_labels_text))
 assert len(test_sentences) == len(predicted_labels_text)
+# Count the number of differences between predicted labels and actual labels
+num_diffs = 0
+for pred_labels, actual_labels in zip(predicted_labels, label_sequences):
+    for pred_label, actual_label in zip(pred_labels, actual_labels):
+        if pred_label != actual_label:
+            num_diffs += 1
 
-
-# In[30]:
-
-
+# Print the number of differences
+print("Number of differences between predicted labels and actual labels:", num_diffs)
+line_counter = 1
 with open('english/predictions.tsv', 'w', encoding='utf-8') as f:
-    for sent, labels in zip(test_sentences, predicted_labels_text):
+    for sent, labels, original_seq in zip(test_sentences, predicted_labels_text, test_sequences):
+        # Use the original words directly
         words = sent.split()
+
         pred_labels = labels.split()
-        for word, label in zip(words, pred_labels):
-            if label != '0':  # Skip the default padding label
-                f.write(f"{word}\t{label}\n")
+
+        # Create a mask based on the original test sequence (without padding)
+        mask = [token != 0 for token in original_seq]
+
+        # Filter out padding from words and predicted labels
+        filtered_words = [word for word, m in zip(words, mask) if m]
+        filtered_labels = [label for label, m in zip(pred_labels, mask) if m]
+        while len(filtered_labels) < len(filtered_words):
+            filtered_labels.append('c')  # Append 'c' (correct) to match the length
+
+        if len(filtered_words) != len(filtered_labels):
+            print(f"Line {line_counter}: Length mismatch")
+            print(f"Original sentence: {sent}")
+            print(f"Filtered words: {' '.join(filtered_words)}")
+            print(f"Filtered labels: {' '.join(filtered_labels)}")
+
+        for word, label in zip(filtered_words, filtered_labels):
+            f.write(f"{word}\t{label}\n")
         f.write("\n")
 
-
-# In[32]:
-
-
-
-
-
-# In[23]:
-
-
-
-
-
-# In[22]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
+        line_counter += 1
