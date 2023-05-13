@@ -114,3 +114,4 @@ for lang_code, data_path in languages.items():
         batch_size=5,
         validation_data=([val_input_ids, val_attention_masks], tf.keras.utils.to_categorical(padded_val_labels))
     )
+    model.save(f"{lang_code}_bert_model.h5")
